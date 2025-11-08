@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>IBM-FE - Interactive Form Validation (MVP)</title>
+<style>
+:root{
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --success: #16a34a;
+  --danger: #ef4444;
+  --radius: 10px;
+  --input-h: 44px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--bg);
+  color:var(--text);
+  padding:28px;
+}
+
+.card{
+  width:100%;
+  max-width:700px;
+  background:var(--card);
+  border-radius:var(--radius);
+  padding:22px;
+  box-shadow:0 8px 30px rgba(2,6,23,0.06);
+  border:1px solid rgba(15,23,42,0.04);
+}
+
+h1{margin:0 0 6px;font-size:20px}
+p.lead{margin:0 0 18px;color:var(--muted);font-size:14px}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (max-width:680px){ .grid{grid-template-columns:1fr} }
+
+.field{margin-bottom:12px}
+
+.label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+.input{
+  width:100%;
+  height:var(--input-h);
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid rgba(15,23,42,0.12);
+  outline:none;
+  font-size:15px;
+  transition:box-shadow .12s, border-color .12s, transform .04s;
+  background:transparent;
+  color:var(--text);
+}
+.input:focus{box-shadow:0 6px 20px rgba(37,99,235,0.06);border-color:var(--accent)}
+
+.row{display:flex;gap:8px;align-items:center}
+.note{font-size:13px;color:var(--muted)}
+
+.error{
+  margin-top:6px;font-size:13px;color:var(--danger);display:flex;gap:8px;align-items:flex-start;
+}
+
+.success-msg{
+  padding:12px;border-radius:8px;background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.12);color:var(--success);margin-bottom:10px;
+}
+
+.invalid{
+  border-color:rgba(239,68,68,0.9) !important;
+  box-shadow:0 8px 20px rgba(239,68,68,0.06);
+}
+.valid{
+  border-color:rgba(16,185,129,0.85) !important;
+  box-shadow:0 8px 20px rgba(16,185,129,0.05);
+}
+
+.submit{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:white;font-weight:600;cursor:pointer;
+}
+
+.submit[disabled]{opacity:0.6;cursor:not-allowed;background:linear-gradient(90deg,#b3d0ff,#dbeafe)}
+
+.criteria{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+
+.crit{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.crit.ok{color:var(--success);font-weight:600}
+.crit.bad{color:var(--muted)}
+
+.small{font-size:13px;color:var(--muted)}
+
+.icon{
+  width:18px;height:18px;display:inline-block;flex:0 0 18px;
+}
+
+footer{margin-top:12px;font-size:13px;color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+<main class="card" role="main" aria-labelledby="pageTitle">
+  <h1 id="pageTitle">IBM-FE — Interactive Form Validation (MVP)</h1>
+  <p class="lead">Real-time validation, inline errors, password strength & accessible interactions.</p>
+
+  <div id="success" class="success-msg" role="status" aria-live="polite" style="display:none">
+    ✅ Form submitted successfully (local-only demo). Data reset.
+  </div>
+
+  <form id="regForm" novalidate>
+    <div class="grid">
+      <div>
+        <div class="field">
+          <label class="label" for="fullName">Full name <span class="small" aria-hidden="true">*</span></label>
+          <input id="fullName" name="name" class="input" type="text" autocomplete="name" required aria-required="true" aria-describedby="nameHelp" />
+          <div id="nameError" class="error" style="display:none"></div>
+          <div id="nameHelp" class="small" style="display:none">Enter your full name (min 2 characters).</div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="email">Email <span class="small">*</span></label>
+          <input id="email" name="email" class="input" type="email" autocomplete="email" required aria-required="true" />
+          <div id="emailError" class="error" style="display:none"></div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="phone">Phone (optional)</label>
+          <input id="phone" name="phone" class="input" type="tel" autocomplete="tel" placeholder="+91 98765 43210 or 9876543210" />
+          <div id="phoneError" class="error" style="display:none"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="field">
+          <label class="label" for="password">Password <span class="small">*</span></label>
+          <input id="password" name="password" class="input" type="password" autocomplete="new-password" required aria-required="true" />
+          <div id="passwordError" class="error" style="display:none"></div>
+
+          <div class="criteria" aria-hidden="false" id="pwdCriteria" style="margin-top:10px">
+            <div class="crit" id="cLen"><span class="icon" aria-hidden="true">●</span>Min 8 characters</div>
+            <div class="crit" id="cUpper"><span class="icon" aria-hidden="true">●</span>At least 1 uppercase</div>
+            <div class="crit" id="cNumber"><span class="icon" aria-hidden="true">●</span>At least 1 number</div>
+            <div class="crit" id="cSpecial"><span class="icon" aria-hidden="true">●</span>At least 1 special char (!@#$%^&*)</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label class="label" for="confirm">Confirm Password <span class="small">*</span></label>
+          <input id="confirm" name="confirm" class="input" type="password" autocomplete="new-password" required aria-required="true" />
+          <div id="confirmError" class="error" style="display:none"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+      <button id="submitBtn" class="submit" type="submit" disabled aria-disabled="true">Submit</button>
+      <div id="formState" class="small" aria-live="polite">All fields required (*)</div>
+    </div>
+  </form>
+
+  <footer>IBM-FE • Demo MVP</footer>
+</main>
+
+<script>
+/* ---------- Local state ---------- */
+const state = {
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirm: ''
+};
+
+/* ---------- DOM refs (explicit, correct) ---------- */
+const form = document.getElementById('regForm');
+const submitBtn = document.getElementById('submitBtn');
+const successBox = document.getElementById('success');
+const formState = document.getElementById('formState');
+
+const refs = {
+  name: document.getElementById('fullName'),
+  email: document.getElementById('email'),
+  phone: document.getElementById('phone'),
+  password: document.getElementById('password'),
+  confirm: document.getElementById('confirm'),
+  nameError: document.getElementById('nameError'),
+  emailError: document.getElementById('emailError'),
+  phoneError: document.getElementById('phoneError'),
+  passwordError: document.getElementById('passwordError'),
+  confirmError: document.getElementById('confirmError'),
+  cLen: document.getElementById('cLen'),
+  cUpper: document.getElementById('cUpper'),
+  cNumber: document.getElementById('cNumber'),
+  cSpecial: document.getElementById('cSpecial'),
+};
+
+/* ---------- Validation helpers ---------- */
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^(?:\+?91[\s-]?|0)?[6-9]\d{9}$/;
+const hasUpper = s => /[A-Z]/.test(s);
+const hasNumber = s => /[0-9]/.test(s);
+const hasSpecial = s => /[!@#\$%\^&\*]/.test(s);
+
+function sanitizeInput(s){
+  return String(s).replace(/<\s*script.*?>.*?<\s*\/\s*script\s*>/gi, '').trim();
+}
+
+/* ---------- Field validators (return {ok,msg}) ---------- */
+function validateName(v){
+  v = sanitizeInput(v);
+  if(!v) return {ok:false,msg:'Full name is required.'};
+  if(v.length < 2) return {ok:false,msg:'Enter at least 2 characters.'};
+  return {ok:true};
+}
+function validateEmail(v){
+  v = sanitizeInput(v);
+  if(!v) return {ok:false,msg:'Email is required.'};
+  if(!emailRegex.test(v)) return {ok:false,msg:'Enter a valid email address.'};
+  return {ok:true};
+}
+function validatePhone(v){
+  v = sanitizeInput(v);
+  if(!v) return {ok:true}; // optional
+  const t = v.replace(/[\s-]/g,'');
+  if(!phoneRegex.test(t)) return {ok:false,msg:'Enter a valid 10-digit Indian phone number.'};
+  return {ok:true};
+}
+function validatePassword(v){
+  v = String(v || '');
+  if(!v) return {ok:false,msg:'Password is required.'};
+  if(v.length < 8) return {ok:false,msg:'Password must be at least 8 characters.'};
+  if(!hasUpper(v)) return {ok:false,msg:'Password requires an uppercase letter.'};
+  if(!hasNumber(v)) return {ok:false,msg:'Password requires a number.'};
+  if(!hasSpecial(v)) return {ok:false,msg:'Password requires a special character (!@#$%^&*).'};
+  return {ok:true};
+}
+function validateConfirm(pw, conf){
+  if(!conf) return {ok:false,msg:'Please confirm your password.'};
+  if(pw !== conf) return {ok:false,msg:'Passwords do not match.'};
+  return {ok:true};
+}
+
+/* ---------- UI helpers ---------- */
+function showError(refEl, msgEl, message){
+  refEl.classList.remove('valid'); refEl.classList.add('invalid');
+  msgEl.style.display='flex';
+  msgEl.innerHTML = `<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 9v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${message}</span>`;
+}
+function showValid(refEl, msgEl){
+  refEl.classList.remove('invalid'); refEl.classList.add('valid');
+  msgEl.style.display='none';
+  msgEl.innerHTML = '';
+}
+function clearNeutral(refEl, msgEl){
+  refEl.classList.remove('invalid','valid');
+  msgEl.style.display='none'; msgEl.innerHTML='';
+}
+
+/* ---------- Form state update ---------- */
+function updateFormState(){
+  const nameV = state.name, emailV = state.email, phoneV = state.phone, pw = state.password, conf = state.confirm;
+  const vName = validateName(nameV);
+  const vEmail = validateEmail(emailV);
+  const vPhone = validatePhone(phoneV);
+  const vPwd = validatePassword(pw);
+  const vConf = validateConfirm(pw, conf);
+  const allValid = vName.ok && vEmail.ok && vPhone.ok && vPwd.ok && vConf.ok;
+
+  submitBtn.disabled = !allValid;
+  submitBtn.setAttribute('aria-disabled', String(!allValid));
+  formState.textContent = allValid ? 'All fields valid — ready to submit' : 'Form has errors / missing fields';
+
+  return {allValid, validations:{vName,vEmail,vPhone,vPwd,vConf}};
+}
+
+/* ---------- Validate single field and update UI ---------- */
+function validateAndUpdateUI(field){
+  if(field === 'name'){
+    const res = validateName(state.name);
+    if(!res.ok) showError(refs.name, refs.nameError, res.msg);
+    else showValid(refs.name, refs.nameError);
+  } else if(field === 'email'){
+    const res = validateEmail(state.email);
+    if(!res.ok) showError(refs.email, refs.emailError, res.msg);
+    else showValid(refs.email, refs.emailError);
+  } else if(field === 'phone'){
+    const res = validatePhone(state.phone);
+    if(!res.ok) showError(refs.phone, refs.phoneError, res.msg);
+    else showValid(refs.phone, refs.phoneError);
+  } else if(field === 'password'){
+    const pw = state.password;
+    // criteria visuals
+    refs.cLen.className = pw.length >= 8 ? 'crit ok' : 'crit bad';
+    refs.cUpper.className = hasUpper(pw) ? 'crit ok' : 'crit bad';
+    refs.cNumber.className = hasNumber(pw) ? 'crit ok' : 'crit bad';
+    refs.cSpecial.className = hasSpecial(pw) ? 'crit ok' : 'crit bad';
+
+    const res = validatePassword(pw);
+    if(!res.ok) showError(refs.password, refs.passwordError, res.msg);
+    else showValid(refs.password, refs.passwordError);
+  } else if(field === 'confirm'){
+    const res = validateConfirm(state.password, state.confirm);
+    if(!res.ok) showError(refs.confirm, refs.confirmError, res.msg);
+    else showValid(refs.confirm, refs.confirmError);
+  }
+  updateFormState();
+}
+
+/* ---------- Attach events ---------- */
+['name','email','phone','password','confirm'].forEach(k=>{
+  const el = refs[k];
+  if(!el) return;
+  el.addEventListener('input', (e) => {
+    state[k] = e.target.value;
+    if(k === 'password' || k === 'confirm'){
+      validateAndUpdateUI('password');
+      validateAndUpdateUI('confirm');
+    } else {
+      validateAndUpdateUI(k);
+    }
+  });
+  el.addEventListener('blur', ()=>{ validateAndUpdateUI(k); });
+});
+
+/* ---------- Submit handler (demo) ---------- */
+form.addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const {allValid} = updateFormState();
+  if(!allValid){
+    // show errors for all fields to guide user
+    ['name','email','phone','password','confirm'].forEach(f => validateAndUpdateUI(f));
+    refs.name.focus();
+    return;
+  }
+
+  const payload = {
+    name: sanitizeInput(state.name),
+    email: sanitizeInput(state.email),
+    phone: sanitizeInput(state.phone),
+    // NEVER store raw password in real apps; this is demo-only
+    password: state.password
+  };
+
+  console.log('Submitted payload (demo):', payload);
+
+  // show success message & reset
+  successBox.style.display='block';
+  setTimeout(()=>{ successBox.style.display='none' }, 3500);
+
+  form.reset();
+  // reset local state & ui classes
+  state.name = state.email = state.phone = state.password = state.confirm = '';
+  ['name','email','phone','password','confirm'].forEach(k => {
+    const el = refs[k];
+    const msgEl = refs[k + 'Error'];
+    if(el) clearNeutral(el, msgEl);
+  });
+  refs.cLen.className = 'crit bad';
+  refs.cUpper.className = 'crit bad';
+  refs.cNumber.className = 'crit bad';
+  refs.cSpecial.className = 'crit bad';
+
+  submitBtn.disabled = true;
+  submitBtn.setAttribute('aria-disabled','true');
+  formState.textContent = 'All fields required (*)';
+  refs.name.focus();
+});
+
+/* initial focus */
+refs.name.focus();
+</script>
+</body>
+</html>
